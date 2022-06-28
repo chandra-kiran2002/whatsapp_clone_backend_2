@@ -239,9 +239,12 @@ transporter.sendMail(mailOptions, function(error, info){
 
 
 // ---------------------------------------------------------------
+let port = process.env.PORT;
+if (port == null || port == "") {
+  port = 3000;
+}
 
-
-var server = app.listen(8081, function () {
+app.listen(8081, function () {
  var host = "localhost"
  var port = server.address().port
  console.log("Example app listening at http://%s:%s", host, port)

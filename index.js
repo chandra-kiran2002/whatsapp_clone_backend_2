@@ -252,12 +252,8 @@ transporter.sendMail(mailOptions, function(error, info){
 
 
 // ---------------------------------------------------------------
-let port = process.env.PORT;
-if (port == null || port == "") {
-  port = 8081;
-}
-
-app.listen(port, function () {
+let port =8081;
+app.listen( process.env.PORT || port, function () {
  var host = "localhost"
  var port = 8081
  console.log("Example app listening at http://%s:%s", host, port)

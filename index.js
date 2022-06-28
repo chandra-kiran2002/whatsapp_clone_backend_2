@@ -4,7 +4,7 @@ var mysql = require('mysql');
 var bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 var cookieParser = require('cookie-parser');
-
+require("dotenv").config()
 var app = express();
 app.use(cookieParser());
 app.use(
@@ -30,7 +30,7 @@ app.get('/', function (req, res) {
 
 app.post('/login', function (req, res) {
     console.log(req.body.email+"  "+req.body.password)
-    var sql="SELECT * FROM PERSONS WHERE EMAIL='"+req.body.email+"' AND PASSWORD='"+req.body.password+"';"
+    var sql="SELECT * FROM persons WHERE EMAIL='"+req.body.email+"' AND PASSWORD='"+req.body.password+"';"
     con.query(sql,function(err,result){
       if (err) throw err;
       // console.log(result)
@@ -48,7 +48,7 @@ app.post('/uploadmessage',function(req,res){
   var from=req.body.from
   var to=req.body.to
   var message=req.body.message
-  var sql="INSERT INTO CHAT (`FROM`,`TO`,`MESSAGE`,date) VALUES ('"+from+"','"+to+"','"+message+"',now());"
+  var sql="INSERT INTO chat (`FROM`,`TO`,`MESSAGE`,date) VALUES ('"+from+"','"+to+"','"+message+"',now());"
   con.query(sql,function(err,result){
     if (err){ 
       res.send("failed")
@@ -80,7 +80,7 @@ app.post('/signup',function(req,res){
     var name=req.body.name
     var password=req.body.password
     console.log(email+"  "+name+"   "+password)
-    var sql = "SELECT * FROM PERSONS WHERE EMAIL='"+email+"';";
+    var sql = "SELECT * FROM persons WHERE EMAIL='"+email+"';";
     con.query(sql, function (err, result) {
       if (err) throw err;
       console.log(result)
@@ -105,7 +105,7 @@ app.post('/checkotp',function(req,res){
     var otp=req.body.otp
     console.log(email+"  "+name+"   "+password+"  "+otp)
     
-    var sql="SELECT * FROM OTPLOG WHERE PERSONID='"+email+"'"
+    var sql="SELECT * FROM otplog WHERE PERSONID='"+email+"'"
 
     con.query(sql,function(err,result){
       if (err) throw err;
@@ -139,6 +139,19 @@ app.post('/getmessages',function(req,res){
     }
   })
 })
+app.post("/msgtonew",function(req,res){
+  var user=req.body.user
+  var sql="select name,id from persons where email='"+user+"';"
+  con.query(sql,function(err,result){
+    if(err){
+      res.send("failed")
+      throw err
+    }
+    else{
+      res.send(result)
+    }
+  })
+})
 
 // db connection---------------------
 
@@ -146,11 +159,11 @@ app.post('/getmessages',function(req,res){
 var mysql = require('mysql');
 
 var con = mysql.createConnection({
-  host: "localhost",
-  port:"3306",
-  user: "root",
-  password: "Kiran@123",
-  database :"info"
+  host: process.env.DB_HOST,
+  port:process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password:process.env.DB_PASS,
+  database :process.env.DB_DATABASE
 
 });
 con.connect(function(err) {
@@ -217,8 +230,8 @@ function getRndInteger() {
   var transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'dummy.python10@gmail.com',
-    pass: 'awjhkdqtopyxqkda'
+    user: process.env.USER_EMAIL,
+    pass: process.env.EMAIL_PASS
   }
 });
 function sendotp(to,otp){
@@ -241,11 +254,11 @@ transporter.sendMail(mailOptions, function(error, info){
 // ---------------------------------------------------------------
 let port = process.env.PORT;
 if (port == null || port == "") {
-  port = 3000;
+  port = 8081;
 }
 
-app.listen(8081, function () {
+app.listen(port, function () {
  var host = "localhost"
- var port = server.address().port
+ var port = 8081
  console.log("Example app listening at http://%s:%s", host, port)
 })

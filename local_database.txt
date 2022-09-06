@@ -1,7 +1,7 @@
-DB_HOST=database-2.c7p4ohsvjtxg.ap-south-1.rds.amazonaws.com
+DB_HOST=localhost
 DB_PORT=3306
-DB_USER=admin
-DB_PASS=Kiran123
+DB_USER=root
+DB_PASS=Kiran@123
 DB_DATABASE=info
 USER_EMAIL=dummy.python10@gmail.com
 EMAIL_PASS=awjhkdqtopyxqkda

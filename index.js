@@ -4,8 +4,17 @@ var mysql = require('mysql');
 var bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 var cookieParser = require('cookie-parser');
-require("dotenv").config()
+var http = require('http');
 var app = express();
+const {Server}=require("socket.io")
+var server = http.createServer(app);
+const io=new Server(server,{
+    cors:{
+        origin:"*",
+        methods:["GET","POST"]
+    }
+})
+require("dotenv").config()
 app.use(cookieParser());
 app.use(
     cors({
@@ -17,15 +26,16 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({  extended: false}))
 
 app.get('/', function (req, res) {
-    console.log(req.body.email+"  "+req.body.password)
-    if(req.body.email=="kiran"&&req.body.password=="123"){
-        res.cookie("kin",'jhvgv')
-        res.send('Hello World');
-    }
-    else{
-      res.cookie("kin",'jhvgv')
-        res.send('Hello');
-    }
+  res.send("hello")
+    // console.log(req.body.email+"  "+req.body.password)
+    // if(req.body.email=="kiran"&&req.body.password=="123"){
+    //     res.cookie("kin",'jhvgv')
+    //     res.send('Hello World');
+    // }
+    // else{
+    //   res.cookie("kin",'jhvgv')
+    //     res.send('Hello');
+    // }
 })
 
 app.post('/login', function (req, res) {
@@ -49,6 +59,9 @@ app.post('/uploadmessage',function(req,res){
   var to=req.body.to
   var message=req.body.message
   var sql="INSERT INTO chat (`FROM`,`TO`,`MESSAGE`,date) VALUES ('"+from+"','"+to+"','"+message+"',now());"
+  var sql1="insert into `info`.`seen` (`from`,`to`, `count`) values ('"+from+"','"+to+"','0');"
+  var sql2="update `info`.`seen` set count=count+1 where `from`="+from+" and `to`="+to+";"
+
   con.query(sql,function(err,result){
     if (err){ 
       res.send("failed")
@@ -56,19 +69,28 @@ app.post('/uploadmessage',function(req,res){
     else{
       res.send("success")
       console.log("message database updated")
+      con.query(sql1,function(err,result){
+        if(err){
+
+        }
+      })
+      con.query(sql2,function(err,result){
+        
+      })
     }
   })
 })
 app.post('/getprofiles',function(req,res){
   var from =req.body.from
-  var sql ="select persons.name ,x.chatlist from (SELECT date, Case when `from`='"+from+"' then `to` when `to`='"+from+"' then `from` END as chatlist  from chat where `from`='"+from+"' or `to`='"+from+"' ORDER BY date desc) x left join persons on persons.id=x.chatlist  GROUP BY x.chatlist order by max(x.date) desc,x.chatlist"
+  // var sql ="select persons.name ,x.chatlist from (SELECT date, Case when `from`='"+from+"' then `to` when `to`='"+from+"' then `from` END as chatlist  from chat where `from`='"+from+"' or `to`='"+from+"' ORDER BY date desc) x left join persons on persons.id=x.chatlist  GROUP BY x.chatlist order by max(x.date) desc,x.chatlist"
+  var sql="select ids, name,count from(select ids,persons.name from (select ids,date from (SELECT distinct  CASE when `from`='"+from+"' then `to`when `to`='"+from +"'then `from`end as ids,id,date FROM chat where `from`='"+from+"'or `to`='"+from+"' order by date desc) y group by y.ids) z left join persons on z.ids=persons.id) w left join seen on w.ids=seen.from and seen.to='"+from+"';"
   con.query(sql,function(err,result){
     if(err){
       res.send("failed")
       throw err
     }
     else{
-      console.log(result)
+      // console.log(result)
       res.send(result)
     }
   })
@@ -128,7 +150,8 @@ app.post('/checkotp',function(req,res){
 app.post('/getmessages',function(req,res){
   var from =req.body.from
   var to=req.body.to
-  var sql="select `from`,`to`,message,date from chat where (`from`='"+from+"' and `to`='"+to+"') or (`from`='"+to+"' and `to`='"+from+"') order by date"
+  var sql="select `from`,`to`,message,date,seen from chat where (`from`='"+from+"' and `to`='"+to+"') or (`from`='"+to+"' and `to`='"+from+"') order by date"
+  var sql1="update `info`.`seen` set count=0 where `from`="+to+" and `to`="+from+";"
   con.query(sql,function(err,result){
     if(err){
       res.send("failed")
@@ -136,6 +159,9 @@ app.post('/getmessages',function(req,res){
     }
     else{
       res.send(result)
+      con.query(sql1,function(err,result){
+
+      })
     }
   })
 })
@@ -252,13 +278,39 @@ transporter.sendMail(mailOptions, function(error, info){
 
 
 // ---------------------------------------------------------------
-let port =8081;
-app.listen( process.env.PORT || port, function () {
+let port =8001;
+server.listen( process.env.PORT || port, function () {
  var host = "localhost"
- var port = 8081
+ var port = 8001
  console.log("Example app listening at http://%s:%s", host, port)
+})
+var online_users=new Map();
+
+io.on('connection', function(socket){
+  console.log(socket.id+"  user connected")
+  socket.on("on-signin",function(id){
+    console.log(id+"    "+socket.id)
+    online_users.set(id,socket.id)
+    console.log(online_users)
+  })
+
+  socket.on('disconnect', function () {
+    for (const x of online_users.entries()) {
+      console.log(x)
+      if(x[1]==socket.id){
+        online_users.delete(x[0])
+        // console.log(online_users)
+      }
+    }
+   console.log('A user disconnected');
+  });
+
+  socket.on("message-sent",function(to,from){
+    if(online_users.has(to))
+    socket.to(online_users.get(to)).emit("update-chat",to,from)
+  })
+
 })
 
 
 
-"jinka chandra kiran"
